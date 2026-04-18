@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+/* ── Light "Ivory" ───────────────────────────────────────── */
+:root {
+  --bg:              #FAFAFA;
+  --surface:         #FFFFFF;
+  --surface-alt:     #F4F4F5;
+  --border:          #E4E4E7;
+  --border-strong:   #D4D4D8;
+
+  --text-hi:         #18181B;
+  --text-md:         #71717A;
+  --text-lo:         #A1A1AA;
+
+  --accent:          #4F46E5;
+  --accent-surface:  #EEF2FF;
+  --accent-text:     #4338CA;
+  --accent-border:   #C7D2FE;
+
+  --danger:          #DC2626;
+  --danger-surface:  #FEF2F2;
+  --danger-text:     #B91C1C;
+
+  --success:         #059669;
+  --success-surface: #ECFDF5;
+
+  --warning:         #D97706;
+  --warning-surface: #FFFBEB;
+
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow:    0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+/* ── Dark "Obsidian" ─────────────────────────────────────── */
+.dark {
+  --bg:              #09090B;
+  --surface:         #18181B;
+  --surface-alt:     #27272A;
+  --border:          #3F3F46;
+  --border-strong:   #52525B;
+
+  --text-hi:         #FAFAFA;
+  --text-md:         #A1A1AA;
+  --text-lo:         #71717A;
+
+  --accent:          #818CF8;
+  --accent-surface:  rgba(129, 140, 248, 0.12);
+  --accent-text:     #A5B4FC;
+  --accent-border:   rgba(129, 140, 248, 0.3);
+
+  --danger:          #F87171;
+  --danger-surface:  rgba(248, 113, 113, 0.12);
+  --danger-text:     #FCA5A5;
+
+  --success:         #34D399;
+  --success-surface: rgba(52, 211, 153, 0.12);
+
+  --warning:         #FBBF24;
+  --warning-surface: rgba(251, 191, 36, 0.12);
+
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+  --shadow:    0 1px 3px 0 rgb(0 0 0 / 0.5);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.6);
+}
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+*, *::before, *::after {
+  border-color: var(--border);
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text-hi);
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(110%); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes toast-out {
+  from { opacity: 1; transform: translateX(0); max-height: 120px; margin-bottom: 0; }
+  to   { opacity: 0; transform: translateX(110%); max-height: 0; margin-bottom: -8px; }
+}
+
+@keyframes toast-progress {
+  from { width: 100%; }
+  to   { width: 0%; }
+}
