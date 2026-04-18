@@ -1,9 +1,11 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
+import swaggerUi from "swagger-ui-express";
 import bookRoutes from "./interface/routes/book.routes";
 import { errorHandler } from "./interface/middlewares/error-handler";
 import { generalLimiter } from "./interface/middlewares/rate-limiter";
+import { swaggerSpec } from "./infrastructure/docs/swagger";
 
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? "http://localhost:3000")
   .split(",")
@@ -14,13 +16,20 @@ export function createApp() {
 
   app.set("trust proxy", 1);
 
+  // Swagger UI requer inline scripts e styles — aplicado apenas na rota /docs
+  app.use("/docs", (_req, _res, next) => {
+    next();
+  });
+
   app.use(
     helmet({
       crossOriginResourcePolicy: { policy: "same-origin" },
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
-          scriptSrc: ["'self'"],
+          scriptSrc: ["'self'", "'unsafe-inline'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", "data:"],
         },
       },
     })
@@ -43,6 +52,9 @@ export function createApp() {
   app.use(express.json({ limit: "50kb" }));
 
   app.use(generalLimiter);
+
+  app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+  app.get("/docs.json", (_req, res) => res.json(swaggerSpec));
 
   app.get("/health", (_req, res) => res.json({ status: "ok" }));
   app.use("/api/books", bookRoutes);

@@ -14,6 +14,7 @@ Sistema de gestão de catálogo de livros com cadastro, listagem, edição e exc
 - [Configuração do Ambiente](#configuração-do-ambiente)
 - [Rodando com Docker](#rodando-com-docker)
 - [Rodando em Desenvolvimento Local](#rodando-em-desenvolvimento-local)
+- [Documentação Interativa (Swagger)](#documentação-interativa-swagger)
 - [API REST](#api-rest)
 - [Testes](#testes)
 - [Segurança](#segurança)
@@ -46,6 +47,8 @@ O sistema permite gerenciar um catálogo de livros com as seguintes funcionalida
 | Zod | 4 | Validação de schemas |
 | Helmet | 8 | Headers de segurança HTTP |
 | express-rate-limit | 8 | Rate limiting |
+| swagger-ui-express | 5 | Interface Swagger UI |
+| swagger-jsdoc | 6 | Geração do spec OpenAPI 3.0 |
 | Jest + ts-jest | 29 | Testes unitários |
 
 ### Frontend
@@ -141,6 +144,7 @@ catalogo_livros/
 │       │       └── __tests__/
 │       ├── infrastructure/
 │       │   ├── database/prisma-client.ts
+│       │   ├── docs/swagger.ts
 │       │   └── repositories/PrismaBookRepository.ts
 │       └── interface/
 │           ├── controllers/BookController.ts
@@ -223,6 +227,7 @@ docker compose up --build
 |---|---|
 | Frontend | http://localhost:3000 |
 | Backend API | http://localhost:3001/api/books |
+| Swagger UI | http://localhost:3001/docs |
 | PostgreSQL | interno (não exposto externamente) |
 
 Para parar:
@@ -281,6 +286,19 @@ Comandos úteis do frontend:
 | `npm run build` | Gera build de produção |
 | `npm start` | Roda o build de produção |
 | `npm run lint` | Verifica lint |
+
+---
+
+## Documentação Interativa (Swagger)
+
+Com o backend rodando, acesse a documentação interativa da API:
+
+| URL | Descrição |
+|---|---|
+| http://localhost:3001/docs | Swagger UI — interface visual para explorar e testar os endpoints |
+| http://localhost:3001/docs.json | Spec OpenAPI 3.0 em JSON (para importar no Postman, Insomnia, etc.) |
+
+O Swagger UI permite executar requisições diretamente pelo browser, sem precisar de nenhuma ferramenta externa.
 
 ---
 
