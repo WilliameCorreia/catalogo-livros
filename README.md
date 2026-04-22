@@ -6,18 +6,36 @@ Sistema de gestão de catálogo de livros com cadastro, listagem, edição e exc
 
 ## Sumário
 
-- [Visão Geral](#visão-geral)
-- [Stack Tecnológico](#stack-tecnológico)
-- [Arquitetura](#arquitetura)
-- [Estrutura do Projeto](#estrutura-do-projeto)
-- [Pré-requisitos](#pré-requisitos)
-- [Configuração do Ambiente](#configuração-do-ambiente)
-- [Rodando com Docker](#rodando-com-docker)
-- [Rodando em Desenvolvimento Local](#rodando-em-desenvolvimento-local)
-- [Documentação Interativa (Swagger)](#documentação-interativa-swagger)
-- [API REST](#api-rest)
-- [Testes](#testes)
-- [Segurança](#segurança)
+- [Catálogo de Livros](#catálogo-de-livros)
+  - [Sumário](#sumário)
+  - [Visão Geral](#visão-geral)
+  - [Stack Tecnológico](#stack-tecnológico)
+    - [Backend](#backend)
+    - [Frontend](#frontend)
+    - [Infraestrutura](#infraestrutura)
+  - [Arquitetura](#arquitetura)
+    - [Backend — Clean Architecture](#backend--clean-architecture)
+    - [Frontend — Server Components + Server Actions](#frontend--server-components--server-actions)
+  - [Estrutura do Projeto](#estrutura-do-projeto)
+  - [Pré-requisitos](#pré-requisitos)
+  - [Configuração do Ambiente](#configuração-do-ambiente)
+  - [Rodando com Docker](#rodando-com-docker)
+  - [Rodando em Desenvolvimento Local](#rodando-em-desenvolvimento-local)
+    - [1. Suba apenas o banco de dados](#1-suba-apenas-o-banco-de-dados)
+    - [2. Backend](#2-backend)
+    - [3. Frontend](#3-frontend)
+  - [Documentação Interativa (Swagger)](#documentação-interativa-swagger)
+  - [API REST](#api-rest)
+    - [Listar livros](#listar-livros)
+    - [Cadastrar livro](#cadastrar-livro)
+    - [Editar livro](#editar-livro)
+    - [Excluir livro](#excluir-livro)
+    - [Categorias disponíveis](#categorias-disponíveis)
+    - [Códigos de erro](#códigos-de-erro)
+  - [Testes](#testes)
+  - [Segurança](#segurança)
+    - [Medidas implementadas](#medidas-implementadas)
+    - [Arquivos sensíveis](#arquivos-sensíveis)
 
 ---
 
@@ -59,7 +77,6 @@ O sistema permite gerenciar um catálogo de livros com as seguintes funcionalida
 | TypeScript | 5 | Tipagem estática |
 | Tailwind CSS | 4 | Estilização |
 | next-themes | 0.4 | Gerenciamento de tema |
-| Axios | 1 | Chamadas HTTP |
 
 ### Infraestrutura
 | Tecnologia | Uso |
@@ -93,24 +110,30 @@ Domain → Application → Infrastructure → Interface
 - **ISP** — interface mínima (`findAll`, `findById`, `create`, `update`, `delete`)
 - **DIP** — use cases dependem da interface, não da implementação concreta
 
-### Frontend — Componentização
+### Frontend — Server Components + Server Actions
 
 ```
 app/
-├── layout.tsx          → ThemeProvider + ToastProvider + ConfirmProvider
-├── page.tsx            → Home
-└── books/page.tsx      → Catálogo (gerencia estado via useBooks hook)
+├── layout.tsx              → ThemeProvider + ToastProvider + ConfirmProvider
+├── page.tsx                → Home
+└── books/
+    ├── page.tsx            → Server Component — busca livros no servidor
+    ├── BooksClient.tsx     → Client Component — estado de UI e modais
+    └── actions.ts          → Server Actions — create, update, delete
 
 components/
-├── ui/                 → Primitivos reutilizáveis (Button, Input, Modal, Toast)
-├── books/              → Feature-scoped (BookCard, BookList, BookForm)
-└── layout/             → Header, ThemeProvider
+├── ui/                     → Primitivos reutilizáveis (Button, Input, Modal, Toast)
+├── books/                  → Feature-scoped (BookCard, BookList, BookForm)
+└── layout/                 → Header, ThemeProvider
 
-contexts/               → ToastContext, ConfirmContext
-hooks/                  → useBooks (CRUD + estado)
-services/               → bookService (axios — isolado da UI)
-types/                  → Book, CreateBookDto
+lib/
+└── api.ts                  → fetchBooks() — chamada server-side ao backend
+
+contexts/                   → ToastContext, ConfirmContext
+types/                      → Book, CreateBookDto
 ```
+
+O browser nunca acessa o backend diretamente. Todas as requisições passam pelo processo Node.js do Next.js via `BACKEND_INTERNAL_URL`.
 
 ---
 
@@ -163,13 +186,16 @@ catalogo_livros/
         │   ├── layout.tsx
         │   ├── globals.css
         │   ├── page.tsx
-        │   └── books/page.tsx
+        │   └── books/
+        │       ├── page.tsx        ← Server Component
+        │       ├── BooksClient.tsx ← Client Component
+        │       └── actions.ts      ← Server Actions
         ├── components/
         │   ├── ui/
         │   └── books/
         ├── contexts/
-        ├── hooks/
-        ├── services/
+        ├── lib/
+        │   └── api.ts              ← fetch server-side
         └── types/
 ```
 
@@ -213,6 +239,13 @@ ALLOWED_ORIGINS=http://localhost:3000
 
 > A senha em `backend/.env` deve ser a mesma definida em `.env` (raiz).
 
+**4. Crie o arquivo `frontend/.env.local`** (usado em desenvolvimento local)
+```bash
+echo 'BACKEND_INTERNAL_URL=http://localhost:3001' > frontend/.env.local
+```
+
+> Em produção (Docker / Kubernetes) essa variável é passada via `environment` — não é necessário o arquivo.
+
 ---
 
 ## Rodando com Docker
@@ -226,8 +259,8 @@ docker compose up --build
 | Serviço | URL |
 |---|---|
 | Frontend | http://localhost:3000 |
-| Backend API | http://localhost:3001/api/books |
-| Swagger UI | http://localhost:3001/docs |
+| Backend API | interno (acessível via frontend — porta 3001 não exposta) |
+| Swagger UI | somente em desenvolvimento local — veja seção abaixo |
 | PostgreSQL | interno (não exposto externamente) |
 
 Para parar:
@@ -291,14 +324,14 @@ Comandos úteis do frontend:
 
 ## Documentação Interativa (Swagger)
 
-Com o backend rodando, acesse a documentação interativa da API:
+O Swagger UI está disponível **somente em desenvolvimento local** (o backend não expõe a porta 3001 no Docker de produção).
+
+Com o backend rodando localmente (`npm run dev` dentro de `backend/`):
 
 | URL | Descrição |
 |---|---|
 | http://localhost:3001/docs | Swagger UI — interface visual para explorar e testar os endpoints |
 | http://localhost:3001/docs.json | Spec OpenAPI 3.0 em JSON (para importar no Postman, Insomnia, etc.) |
-
-O Swagger UI permite executar requisições diretamente pelo browser, sem precisar de nenhuma ferramenta externa.
 
 ---
 
@@ -431,5 +464,6 @@ npm run test:watch
 |---|---|
 | `.env` (raiz) | Ignorado pelo git — contém senha do PostgreSQL |
 | `backend/.env` | Ignorado pelo git — contém DATABASE_URL |
+| `frontend/.env.local` | Ignorado pelo git — contém BACKEND_INTERNAL_URL |
 | `.env.example` | Commitado — template sem valores reais |
 | `backend/.env.example` | Commitado — template sem valores reais |
