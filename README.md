@@ -638,5 +638,5 @@ npm run test:watch
 - Williame Correia @WilliameCorreia
 - Jefferson Quesado @jeffque
 - Janderson Sampaio @jandersonsiqueira
-- Italo Souza Sampaio 
+- Italo Souza Sampaio @italo12346
 - Arion Mathias
