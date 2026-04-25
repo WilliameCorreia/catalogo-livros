@@ -43,6 +43,7 @@ Sistema de gestão de catálogo de livros com cadastro, listagem, edição e exc
   - [Segurança](#segurança)
     - [Medidas implementadas](#medidas-implementadas)
     - [Arquivos sensíveis](#arquivos-sensíveis)
+  - [Autores](#autores)
 
 ---
 
@@ -629,3 +630,13 @@ npm run test:watch
 | `.env.example` | Commitado — template sem valores reais |
 | `backend/.env.example` | Commitado — template sem valores reais |
 | `k8s/create-secret.sh` | Commitado — script sem valores reais (placeholder) |
+
+---
+
+## Autores
+
+- Williame Correia @WilliameCorreia
+- Jefferson Quesado @jeffque
+- Janderson Sampaio @jandersonsiqueira
+- Italo Souza Sampaio 
+- Arion Mathias
