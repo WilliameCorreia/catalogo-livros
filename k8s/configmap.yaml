@@ -1,0 +1,28 @@
+# =============================================================================
+# CONFIGMAP - configurações NÃO sensíveis compartilhadas pelos serviços
+#
+# Aqui ficam variáveis que podem ser vistas em texto puro sem risco
+# (usuário do banco, nome do banco, URLs internas, NODE_ENV, etc.).
+# Senhas e tokens NUNCA entram aqui - vão no Secret.
+#
+# Aplique com: kubectl apply -f k8s/configmap.yaml
+# =============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: catalogo
+
+data:
+  # ---- Postgres ----
+  POSTGRES_USER: "catalogo"
+  POSTGRES_DB: "catalogo_livros"
+
+  # ---- Backend ----
+  PORT: "3001"
+  NODE_ENV: "production"
+  ALLOWED_ORIGINS: "https://srv1496079.hstgr.cloud,http://localhost:30080"
+
+  # ---- Frontend ----
+  # URL interna usada pelo Next.js no SSR para chamar o backend.
+  NEXT_PUBLIC_API_URL: "http://backend-service:3001"
