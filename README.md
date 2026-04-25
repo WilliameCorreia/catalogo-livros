@@ -9,6 +9,7 @@ Sistema de gestão de catálogo de livros com cadastro, listagem, edição e exc
 - [Catálogo de Livros](#catálogo-de-livros)
   - [Sumário](#sumário)
   - [Visão Geral](#visão-geral)
+    - [Exemplo de uso](#exemplo-de-uso)
   - [Stack Tecnológico](#stack-tecnológico)
     - [Backend](#backend)
     - [Frontend](#frontend)
@@ -55,6 +56,30 @@ O sistema permite gerenciar um catálogo de livros com as seguintes funcionalida
 - Excluir livro com confirmação via modal customizado
 - Tema claro/escuro com paletas de cores profissionais
 - Notificações de feedback (toasts) sem depender de alerts nativos do navegador
+
+### Exemplo de uso
+
+Listando os livros cadastrados:
+
+![índice](img/idx.png)
+
+Editando um item:
+
+![update](img/update.png)
+
+Inserindo um novo livro:
+
+![inserindo novo item, componente vazio](img/novo.png)
+
+![inserindo novo item, componente preenchido](img/novo-preenchido.png)
+
+Removendo o item:
+
+![diálogo de confirmação de remoção](img/delete.png)
+
+Toda ação que altera o banco é devidamente notificada:
+
+![exemplo de notificação para a exclusão de um livro](img/notification.png)
 
 ---
 
