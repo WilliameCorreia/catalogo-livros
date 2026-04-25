@@ -1,6 +1,6 @@
 # Catálogo de Livros
 
-Sistema de gestão de catálogo de livros com cadastro, listagem, edição e exclusão. Arquitetura de microsserviços com backend Node.js e frontend Next.js, totalmente dockerizado.
+Sistema de gestão de catálogo de livros com cadastro, listagem, edição e exclusão. Arquitetura de microsserviços com backend Node.js e frontend Next.js, totalmente dockerizado e com suporte a deploy em Kubernetes.
 
 ---
 
@@ -20,6 +20,12 @@ Sistema de gestão de catálogo de livros com cadastro, listagem, edição e exc
   - [Pré-requisitos](#pré-requisitos)
   - [Configuração do Ambiente](#configuração-do-ambiente)
   - [Rodando com Docker](#rodando-com-docker)
+  - [Deploy com Kubernetes](#deploy-com-kubernetes)
+    - [Pré-requisitos Kubernetes](#pré-requisitos-kubernetes)
+    - [Estrutura dos Manifests](#estrutura-dos-manifests)
+    - [Aplicando os Manifests](#aplicando-os-manifests)
+    - [Verificando o Deploy](#verificando-o-deploy)
+    - [Persistência de Dados](#persistência-de-dados)
   - [Rodando em Desenvolvimento Local](#rodando-em-desenvolvimento-local)
     - [1. Suba apenas o banco de dados](#1-suba-apenas-o-banco-de-dados)
     - [2. Backend](#2-backend)
@@ -81,8 +87,10 @@ O sistema permite gerenciar um catálogo de livros com as seguintes funcionalida
 ### Infraestrutura
 | Tecnologia | Uso |
 |---|---|
-| Docker + Docker Compose | Orquestração dos serviços |
+| Docker + Docker Compose | Orquestração local dos serviços |
 | Multi-stage Dockerfile | Imagens otimizadas para produção |
+| Kubernetes | Orquestração em produção (VPS / Kind) |
+| StatefulSet + PVC | Persistência do PostgreSQL no cluster |
 
 ---
 
@@ -140,11 +148,22 @@ O browser nunca acessa o backend diretamente. Todas as requisições passam pelo
 ## Estrutura do Projeto
 
 ```
-catalogo_livros/
+catalogo-livros/
 ├── .env.example                    ← variáveis de ambiente (referência)
 ├── .gitattributes
 ├── .gitignore
 ├── docker-compose.yml
+│
+├── k8s/                            ← manifests Kubernetes
+│   ├── namespace.yaml              ← namespace "catalogo"
+│   ├── configmap.yaml              ← variáveis não sensíveis
+│   ├── create-secret.sh            ← script para criar o Secret no cluster
+│   ├── postgres/
+│   │   └── statefulset.yaml        ← StatefulSet + Service headless + PVC
+│   ├── backend/
+│   │   └── deployment.yaml         ← Deployment + Service ClusterIP
+│   └── frontend/
+│       └── deployment.yaml         ← Deployment + Service NodePort 30080
 │
 ├── backend/
 │   ├── Dockerfile
@@ -271,6 +290,119 @@ docker compose down
 Para parar e remover os volumes (apaga os dados do banco):
 ```bash
 docker compose down -v
+```
+
+---
+
+## Deploy com Kubernetes
+
+### Pré-requisitos Kubernetes
+
+- Cluster Kubernetes disponível (Kind, Minikube, K3s ou VPS com K8s)
+- `kubectl` configurado para o cluster alvo
+- Imagens publicadas no Docker Hub:
+  - `williame/catalogo_livros_backend:1.0.0`
+  - `williame/catalogo_livros_frontend:1.0.0`
+
+### Estrutura dos Manifests
+
+```
+k8s/
+├── namespace.yaml       → namespace "catalogo" (isolamento de recursos)
+├── configmap.yaml       → variáveis não sensíveis (NODE_ENV, URLs, portas)
+├── create-secret.sh     → cria o Secret com credenciais do banco via CLI
+├── postgres/
+│   └── statefulset.yaml → StatefulSet + Service headless + PVC 5Gi
+├── backend/
+│   └── deployment.yaml  → 2 réplicas, ClusterIP (somente interno)
+└── frontend/
+    └── deployment.yaml  → 2 réplicas, NodePort 30080 (entrada externa)
+```
+
+**Fluxo de rede no cluster:**
+
+```
+Internet → NodePort 30080 → Pod frontend (Next.js SSR)
+                                    │ ClusterIP — DNS interno
+                                    ▼
+                             Pod backend (Express)
+                                    │ ClusterIP — DNS interno
+                                    ▼
+                             Pod postgres (StatefulSet)
+                                    │
+                                    ▼
+                             PVC postgres-data-postgres-0 (5Gi)
+```
+
+> O backend e o banco **nunca são expostos externamente**. O frontend é o único ponto de entrada e todas as chamadas à API acontecem server-side (dentro do pod), não no browser do usuário.
+
+### Aplicando os Manifests
+
+Execute os comandos na ordem abaixo:
+
+```bash
+# 1. Criar o namespace
+kubectl apply -f k8s/namespace.yaml
+
+# 2. Criar o Secret com as credenciais do banco
+#    Edite o script e substitua "sua_senha_aqui" antes de executar
+chmod +x k8s/create-secret.sh
+./k8s/create-secret.sh
+
+# 3. Aplicar ConfigMap
+kubectl apply -f k8s/configmap.yaml
+
+# 4. Subir o banco (StatefulSet cria o PVC automaticamente)
+kubectl apply -f k8s/postgres/
+
+# 5. Subir o backend
+kubectl apply -f k8s/backend/
+
+# 6. Subir o frontend
+kubectl apply -f k8s/frontend/
+```
+
+### Verificando o Deploy
+
+```bash
+# Acompanhar os pods subindo
+kubectl get pods -n catalogo -w
+
+# Ver todos os recursos do namespace
+kubectl get all -n catalogo
+
+# Verificar o PVC do banco
+kubectl get pvc -n catalogo
+
+# Logs em tempo real
+kubectl logs -f deployment/backend  -n catalogo
+kubectl logs -f deployment/frontend -n catalogo
+```
+
+Aguarde todos os pods ficarem com status `Running` e `1/1 Ready`. Após isso, acesse a aplicação em:
+
+```
+http://<IP_DO_CLUSTER>:30080
+```
+
+### Persistência de Dados
+
+O PostgreSQL usa um **StatefulSet** com `volumeClaimTemplates`, que provisiona automaticamente um PVC chamado `postgres-data-postgres-0`. O volume é independente do ciclo de vida dos pods — os dados sobrevivem a restarts, rollouts e até à deleção manual dos pods:
+
+```bash
+# Deletar todos os pods (simula falha)
+kubectl delete pods --all -n catalogo
+
+# O Kubernetes recria os pods automaticamente
+kubectl get pods -n catalogo -w
+
+# Ao acessar novamente, os dados permanecem intactos
+```
+
+Para remover todos os recursos do cluster (inclusive os dados):
+
+```bash
+kubectl delete namespace catalogo
 ```
 
 ---
@@ -457,6 +589,9 @@ npm run test:watch
 | **Erros** | Stack traces expostos apenas em `NODE_ENV=development` |
 | **Credenciais** | Senha do banco via variável de ambiente — nunca commitada no repositório |
 | **Container** | Backend e frontend rodam como usuário não-root nos containers Docker |
+| **Rede (K8s)** | Backend e banco com `ClusterIP` — inacessíveis externamente |
+| **Secrets (K8s)** | Credenciais criadas via `kubectl create secret` — fora do repositório |
+| **Isolamento (K8s)** | Todos os recursos no namespace `catalogo` — separados do sistema |
 
 ### Arquivos sensíveis
 
@@ -465,5 +600,7 @@ npm run test:watch
 | `.env` (raiz) | Ignorado pelo git — contém senha do PostgreSQL |
 | `backend/.env` | Ignorado pelo git — contém DATABASE_URL |
 | `frontend/.env.local` | Ignorado pelo git — contém BACKEND_INTERNAL_URL |
+| `k8s/secret.yaml` | Ignorado pelo git — Secret criado via CLI diretamente no cluster |
 | `.env.example` | Commitado — template sem valores reais |
 | `backend/.env.example` | Commitado — template sem valores reais |
+| `k8s/create-secret.sh` | Commitado — script sem valores reais (placeholder) |
